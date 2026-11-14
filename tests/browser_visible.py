@@ -111,6 +111,16 @@ with sync_playwright() as playwright:
     alice.locator('.board-column').first.locator('.task-card').first.get_by_text('Set up hosting').wait_for()
     step('Required card title, card creation and same-column reorder')
 
+    card(alice, 'Design hero image').drag_to(card(alice, 'Set up hosting'))
+    column(alice, 'Backlog').locator('.task-card').first.get_by_text('Design hero image').wait_for()
+    card(alice, 'Set up hosting').drag_to(card(alice, 'Design hero image'))
+    column(alice, 'Backlog').locator('.task-card').first.get_by_text('Set up hosting').wait_for()
+    card(alice, 'Write copy').drag_to(column(alice, 'In Progress').locator('.column-cards'))
+    column(alice, 'In Progress').get_by_text('Write copy').wait_for()
+    card(alice, 'Write copy').drag_to(column(alice, 'Backlog').locator('.column-cards'))
+    column(alice, 'Backlog').get_by_text('Write copy').wait_for()
+    step('Desktop drag and drop within and across columns')
+
     open_settings(alice, 'Labels')
     for label_name, color in [('Content', 'blue'), ('Bug', 'red')]:
         alice.get_by_label('Label name').fill(label_name)
@@ -162,6 +172,15 @@ with sync_playwright() as playwright:
     step('Labels are isolated per board')
     alice.get_by_role('button', name='Website Relaunch').click()
     alice.get_by_role('heading', name='Website Relaunch').wait_for()
+    open_settings(alice)
+    alice.get_by_label('Board name').fill('Website Relaunch Updated')
+    alice.get_by_role('button', name='Save name').click()
+    alice.get_by_role('heading', name='Website Relaunch Updated').wait_for()
+    alice.get_by_label('Board name').fill('Website Relaunch')
+    alice.get_by_role('button', name='Save name').click()
+    alice.get_by_role('heading', name='Website Relaunch').wait_for()
+    close_dialog(alice)
+    step('Board rename persists in the workspace')
 
     # Signed-in contexts share the server, but never share cookies or local state.
     bob_context = browser.new_context(viewport={'width': 1280, 'height': 800})
@@ -248,6 +267,16 @@ with sync_playwright() as playwright:
     alice.get_by_role('alert').filter(has_text='Move the cards').wait_for()
     close_dialog(alice)
     step('Empty column deleted; populated column blocked by the server')
+
+    card(alice, 'Bob edited task').click()
+    alice.get_by_role('button', name='Delete card').click()
+    alice.get_by_role('button', name='Delete card').last.click()
+    assert card(alice, 'Bob edited task').count() == 0
+    open_settings(alice, 'Labels')
+    alice.get_by_role('button', name='Delete Bug label').click()
+    alice.get_by_role('button', name='Delete label').click()
+    assert alice.get_by_role('button', name='Delete Bug label').count() == 0
+    step('Card and label deletion')
 
     open_settings(alice)
     alice.get_by_role('button', name='Delete board').click()

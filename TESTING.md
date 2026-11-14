@@ -37,7 +37,7 @@ The browser script creates random `@example.com` test accounts in the disposable
 | --- | --- |
 | Access | Signed-out workspace hidden; sign-up, sign-out, sign-in |
 | Boards and columns | Create board; add, reorder, rename and delete columns; delete board with cards |
-| Cards | Required title; create, edit, delete, move across columns, reorder within a column |
+| Cards | Required title; create, edit, delete; native drag and drop within/across columns; editor-based move |
 | Due dates and labels | Overdue flag appears and clears; board label creation and card attachment |
 | Finding cards | Case-insensitive description search; label and overdue filters together; no-match state |
 | Teams | Member sees and changes cards; owner sees member changes; member board/column/label/member API changes receive 403; non-member board request receives 404 |
