@@ -1,6 +1,6 @@
 # Kanban — Coding Challenge #146
 
-A small collaborative Kanban board built with Python, SQLite and plain browser JavaScript. Boards, columns, cards, due dates, labels, search and team sharing persist in SQLite. Board owners manage structure and members; members can manage cards. Access checks run on every API request.
+A collaborative Kanban board with private accounts, owner-managed boards, and card editing for team members. The interface uses React, Vite and Lucide icons. Python serves the API and stores data in SQLite.
 
 ## Stack and challenge fit
 
@@ -8,21 +8,38 @@ A small collaborative Kanban board built with Python, SQLite and plain browser J
 | --- | --- |
 | Server and API | Python 3 standard library (`http.server`) |
 | Database | SQLite (`sqlite3`) |
-| Interface | Semantic HTML, CSS and browser JavaScript |
-| Optional browser checks | Playwright and Chrome or Chromium |
+| Frontend | React 19, Vite 8, CSS, Lucide React |
+| Browser checks | Playwright in visible Google Chrome |
 
-Challenge #146 permits any web or mobile stack. OutSystems is an optional route, not a requirement. This implementation chooses a local web app with built-in persistence and no runtime packages.
+Challenge #146 permits any web or mobile stack. OutSystems is an optional route, not a requirement. This implementation is a web app with persistent local storage and server-enforced permissions.
 
 ## Run locally
 
-Requires Python 3.10 or newer. No packages or build tools are needed.
+Requires Python 3.10+ and Node.js 20.19+ or 22.12+. From this directory:
 
 ```sh
-cd 146-kanban
+npm --prefix web ci
+npm --prefix web run build
 python3 kanban.py
 ```
 
-Open [http://localhost:8000](http://localhost:8000). Sign up, create a board and start adding cards. The database is created as `kanban.sqlite3` in this folder. Use `python3 kanban.py --port 8001 --db /path/to/board.sqlite3` to change the port or database location. Stop with Ctrl+C.
+Open [http://localhost:8000](http://localhost:8000). Sign up, create a board and start adding cards. The database is created as `kanban.sqlite3` in this folder. Use `python3 kanban.py --port 8001 --db /path/to/board.sqlite3` to change the port or database location. Stop with Ctrl+C. Existing SQLite data from the earlier interface remains compatible.
+
+### Frontend development
+
+Run the API and Vite in separate terminals:
+
+```sh
+KANBAN_DEV_ORIGIN=http://127.0.0.1:5173 python3 kanban.py --port 8000
+```
+
+```sh
+cd web
+npm ci
+npm run dev
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to port 8000. If the API uses another port, set `KANBAN_API_PORT` for the Vite command. Rebuild after frontend changes when using the single-server mode.
 
 ## Use the board
 
@@ -30,7 +47,8 @@ Open [http://localhost:8000](http://localhost:8000). Sign up, create a board and
 - Add cards with a title, description, due date and labels. Click a card to edit it. Drag a card onto another card or empty part of a column to move it, or choose its column and position in the editor. Reload to verify saved order.
 - Search titles and descriptions without case sensitivity. Label and overdue filters combine with search.
 - Open a card to edit or delete it. A column with cards cannot be deleted until they are moved or deleted.
-- Use **Manage board** to rename or delete a board, create or remove labels, and add or remove members.
+- Use **Board settings** to rename or delete a board, create or remove labels, and add or remove members.
+- The session is verified before showing the workspace on reload, so a signed-in user does not see a sign-in flash.
 
 ## API
 
@@ -57,4 +75,10 @@ Owner-only endpoints check ownership in the server. Card endpoints check board m
 
 Run `python3 -m unittest discover -s tests -v`. The test suite uses temporary SQLite databases and checks the owner/member boundary, card moves, board deletion and persistence behavior.
 
-For the full browser walkthrough and screenshots, follow [TESTING.md](TESTING.md). Playwright is needed only for that optional check; the app itself needs no packages.
+For the visible Chrome walkthrough and screenshots, follow [TESTING.md](TESTING.md).
+
+## Contributing
+
+Issues and pull requests are welcome. Fork the repository, run the unit and visible browser checks, and describe the behavior you changed. Keep test accounts and personal data out of commits. The frontend source is in `web/src`; the API is in `kanban.py`.
+
+Licensed under [MIT](LICENSE).

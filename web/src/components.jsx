@@ -1,0 +1,156 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight,
+  CircleAlert, Columns3, Ellipsis, FolderKanban, GripVertical, LogOut, Plus,
+  Search, Settings2, Tag, Trash2, Users, X,
+} from 'lucide-react';
+import { formatDate, isOverdue } from './api.js';
+
+export const LABEL_COLORS = ['blue', 'red', 'green', 'purple', 'amber'];
+
+export function IconButton({ icon: Icon, label, className = '', ...props }) {
+  return <button type="button" className={`icon-button ${className}`} aria-label={label} title={label} {...props}><Icon size={18} strokeWidth={1.9} aria-hidden="true" /></button>;
+}
+
+export function Dialog({ title, subtitle, children, onClose, className = '' }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const node = ref.current;
+    node.showModal();
+    return () => { if (node.open) node.close(); };
+  }, []);
+  return <dialog ref={ref} className={`app-dialog ${className}`} onCancel={(event) => { event.preventDefault(); onClose(); }} aria-labelledby="dialog-title">
+    <div className="dialog-header">
+      <div><h2 id="dialog-title">{title}</h2>{subtitle && <p>{subtitle}</p>}</div>
+      <IconButton icon={X} label="Close dialog" onClick={onClose} />
+    </div>
+    {children}
+  </dialog>;
+}
+
+export function BootScreen({ error, retry }) {
+  return <div className="boot-screen" role="status" aria-live="polite">
+    <div className="boot-mark"><Columns3 size={24} strokeWidth={2.2} aria-hidden="true" /></div>
+    {error ? <><h1>Unable to open your workspace</h1><p>{error}</p><button className="button primary" onClick={retry}>Try again</button></> : <><div className="boot-line" /><span>Opening your workspace…</span></>}
+  </div>;
+}
+
+export function AuthScreen({ onSubmit, busy, error }) {
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const signingUp = mode === 'signup';
+  return <div className="auth-screen">
+    <header className="auth-top"><span className="wordmark"><span className="wordmark-symbol"><Columns3 size={18} strokeWidth={2.4} aria-hidden="true" /></span>kanban</span><span>A focused place for team work.</span></header>
+    <main className="auth-main"><div className="auth-panel">
+      <div className="auth-intro"><span className="eyebrow">YOUR WORKSPACE</span><h1>{signingUp ? 'Start with a clear board.' : 'Welcome back.'}</h1><p>{signingUp ? 'Create an account and make space for your next project.' : 'Pick up where your team left off.'}</p></div>
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit(mode, email, password); }}>
+        <label>Email address<input name="email" type="email" autoComplete="email" spellCheck="false" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="name@example.com" /></label>
+        <label>Password<input name="password" type="password" autoComplete={signingUp ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} placeholder={signingUp ? 'At least 8 characters' : 'Enter your password'} /></label>
+        {error && <p className="form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />{error}</p>}
+        <button className="button primary auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : signingUp ? 'Create account' : 'Sign in'}<ArrowRight size={17} aria-hidden="true" /></button>
+      </form>
+      <p className="auth-switch">{signingUp ? 'Already have an account?' : 'New to Kanban?'} <button type="button" onClick={() => setMode(signingUp ? 'login' : 'signup')}>{signingUp ? 'Sign in' : 'Create an account'}</button></p>
+    </div></main>
+  </div>;
+}
+
+export function Sidebar({ boards, selectedId, me, onSelect, onCreate, onSignOut, mobileOpen, setMobileOpen }) {
+  return <>
+    {mobileOpen && <button className="sidebar-scrim" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+      <div className="sidebar-brand"><span className="wordmark"><span className="wordmark-symbol"><Columns3 size={18} strokeWidth={2.4} aria-hidden="true" /></span>kanban</span><IconButton className="mobile-close" icon={X} label="Close navigation" onClick={() => setMobileOpen(false)} /></div>
+      <div className="sidebar-section"><div className="sidebar-section-head"><span>Boards</span><IconButton icon={Plus} label="Create board" onClick={onCreate} /></div>
+        <nav aria-label="Boards" className="board-nav">{boards.map((item) => <button type="button" key={item.id} className={`nav-board ${selectedId === item.id ? 'active' : ''}`} onClick={() => { onSelect(item.id); setMobileOpen(false); }}><FolderKanban size={17} strokeWidth={1.8} aria-hidden="true" /><span>{item.name}</span></button>)}
+          {boards.length === 0 && <p className="sidebar-empty">Your boards will appear here.</p>}</nav>
+      </div>
+      <div className="sidebar-footer"><span className="avatar" aria-hidden="true">{me.email.slice(0, 1).toUpperCase()}</span><span className="account-email" title={me.email}>{me.email}</span><IconButton icon={LogOut} label="Sign out" onClick={onSignOut} /></div>
+    </aside>
+  </>;
+}
+
+export function BoardColumn({ column, cards, labels, owner, onAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
+  const [menu, setMenu] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const drop = (event, index) => {
+    event.preventDefault(); event.stopPropagation(); setDragOver(false);
+    const id = Number(event.dataTransfer.getData('text/plain'));
+    if (id) onMove(id, column.id, index);
+  };
+  return <section className={`board-column ${dragOver ? 'drop-target' : ''}`} aria-labelledby={`column-${column.id}`} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragOver(false); }} onDrop={(event) => drop(event, column.cards.length)}>
+    <div className="column-top"><div className="column-title"><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
+      {owner && <div className="column-tools"><IconButton icon={ChevronLeft} label={`Move ${column.name} left`} onClick={() => onReorder(column.id, -1)} /><IconButton icon={ChevronRight} label={`Move ${column.name} right`} onClick={() => onReorder(column.id, 1)} /><div className="menu-wrap"><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
+    </div>
+    <div className="column-cards">{cards.map((card) => {
+      const overdue = isOverdue(card.due_date);
+      return <button type="button" key={card.id} className="task-card" draggable onClick={() => onEdit(card, column.id)} onDragStart={(event) => { event.dataTransfer.setData('text/plain', String(card.id)); event.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDragOver(false)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, column.cards.findIndex((item) => item.id === card.id))}>
+        {card.label_ids.length > 0 && <span className="card-labels">{card.label_ids.map((id) => { const label = labels.find((item) => item.id === id); return label ? <span key={id} className={`label-chip ${label.color}`}>{label.name}</span> : null; })}</span>}
+        <span className="card-title">{card.title}</span>
+        {card.description && <span className="card-description">{card.description}</span>}
+        {card.due_date && <span className={`card-due ${overdue ? 'overdue' : ''}`}><CalendarDays size={14} aria-hidden="true" />{overdue ? 'Overdue · ' : ''}{formatDate(card.due_date)}</span>}
+      </button>;
+    })}</div>
+    <button type="button" className="add-card" onClick={() => onAdd(column.id)}><Plus size={16} strokeWidth={2} aria-hidden="true" />Add card</button>
+  </section>;
+}
+
+export function FilterBar({ search, setSearch, labelId, setLabelId, overdueOnly, setOverdueOnly, labels, onClear, hasFilters }) {
+  return <div className="filter-bar"><label className="search-field"><Search size={18} aria-hidden="true" /><span className="sr-only">Search card titles and descriptions</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search cards" /></label>
+    <label className="select-field"><Tag size={16} aria-hidden="true" /><span className="sr-only">Filter by label</span><select value={labelId} onChange={(event) => setLabelId(event.target.value)}><option value="">All labels</option>{labels.map((label) => <option key={label.id} value={label.id}>{label.name}</option>)}</select><ChevronDown size={15} aria-hidden="true" /></label>
+    <label className="overdue-filter"><input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} />Overdue only</label>
+    {hasFilters && <button type="button" className="clear-filters" onClick={onClear}>Clear filters</button>}
+  </div>;
+}
+
+export function NameDialog({ title, label, initial = '', submitLabel, onSave, onClose, busy, error }) {
+  const [name, setName] = useState(initial);
+  return <Dialog title={title} onClose={onClose}><form className="dialog-body" onSubmit={(event) => { event.preventDefault(); onSave(name.trim()); }}><label className="field-label">{label}<input autoFocus value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" type="submit" disabled={busy || !name.trim()}>{submitLabel}</button></div></form></Dialog>;
+}
+
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose, busy, error }) {
+  return <Dialog title={title} onClose={onClose}><div className="dialog-body"><p className="confirm-message">{message}</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="button" className="button danger" onClick={onConfirm} disabled={busy}>{confirmLabel}</button></div></div></Dialog>;
+}
+
+export function CardEditor({ card, initialColumnId, board, onSave, onDelete, onClose, busy, error }) {
+  const initialColumn = board.columns.find((column) => column.id === (card?.column_id || initialColumnId)) || board.columns[0];
+  const [title, setTitle] = useState(card?.title || '');
+  const [description, setDescription] = useState(card?.description || '');
+  const [dueDate, setDueDate] = useState(card?.due_date || '');
+  const [labelIds, setLabelIds] = useState(card?.label_ids || []);
+  const [columnId, setColumnId] = useState(initialColumn.id);
+  const [position, setPosition] = useState(card ? initialColumn.cards.findIndex((item) => item.id === card.id) : initialColumn.cards.length);
+  const target = board.columns.find((column) => column.id === columnId);
+  const maxPosition = target.cards.length + (!card || card.column_id !== columnId ? 1 : 0);
+  const toggleLabel = (id) => setLabelIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  return <Dialog title={card ? 'Edit card' : 'New card'} subtitle={card ? 'Update the details and place this card where it belongs.' : `Adding to ${initialColumn.name}`} onClose={onClose} className="card-dialog">
+    <form className="dialog-body card-form" onSubmit={(event) => { event.preventDefault(); onSave({ title: title.trim(), description, due_date: dueDate || null, label_ids: labelIds, column_id: columnId, position }); }}>
+      <label className="field-label">Title<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={200} placeholder="What needs to get done?" /></label>
+      <label className="field-label">Description <span className="optional">Optional</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Add useful context for your team" /></label>
+      <div className="form-row"><label className="field-label">Due date <span className="optional">Optional</span><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
+        <label className="field-label">Column<select value={columnId} onChange={(event) => { const id = Number(event.target.value); setColumnId(id); const next = board.columns.find((column) => column.id === id); setPosition(next.cards.length); }}>{board.columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label></div>
+      <label className="field-label position-field">Position<select value={Math.min(position, maxPosition - 1)} onChange={(event) => setPosition(Number(event.target.value))}>{Array.from({ length: maxPosition }, (_, index) => <option key={index} value={index}>{index + 1} of {maxPosition}</option>)}</select></label>
+      <fieldset className="label-picker"><legend>Labels</legend>{board.labels.length ? <div className="label-options">{board.labels.map((label) => <label key={label.id} className="label-option"><input type="checkbox" checked={labelIds.includes(label.id)} onChange={() => toggleLabel(label.id)} /><span className={`label-chip ${label.color}`}>{label.name}</span></label>)}</div> : <p>No labels yet. A board owner can add them in Board settings.</p>}</fieldset>
+      {error && <p className="form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />{error}</p>}
+      <div className="dialog-actions"><div>{card && <button type="button" className="button text-danger" onClick={onDelete}><Trash2 size={16} aria-hidden="true" />Delete card</button>}</div><div className="action-group"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy || !title.trim()}>{busy ? 'Saving…' : card ? 'Save changes' : 'Create card'}</button></div></div>
+    </form>
+  </Dialog>;
+}
+
+export function BoardSettings({ board, onClose, onRename, onAddLabel, onRemoveLabel, onAddMember, onRemoveMember, onDeleteBoard, busy, error }) {
+  const [tab, setTab] = useState('general');
+  const [name, setName] = useState(board.name);
+  const [labelName, setLabelName] = useState('');
+  const [color, setColor] = useState('blue');
+  const [email, setEmail] = useState('');
+  return <Dialog title="Board settings" subtitle={board.name} onClose={onClose} className="settings-dialog">
+    <div className="settings-tabs" role="tablist" aria-label="Board settings sections">
+      {[['general', Settings2, 'General'], ['labels', Tag, 'Labels'], ['people', Users, 'People']].map(([id, Icon, text]) => <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><Icon size={16} aria-hidden="true" />{text}</button>)}
+    </div>
+    <div className="settings-panel" role="tabpanel">
+      {tab === 'general' && <><form onSubmit={(event) => { event.preventDefault(); onRename(name.trim()); }}><h3>Board name</h3><p>The name your team sees in their board list.</p><label className="field-label"><span className="sr-only">Board name</span><input value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></label><button type="submit" className="button primary" disabled={busy || !name.trim()}>Save name</button></form><div className="settings-danger"><div><h3>Delete board</h3><p>Remove this board and all of its cards. This cannot be undone.</p></div><button className="button danger-outline" type="button" onClick={onDeleteBoard}><Trash2 size={16} aria-hidden="true" />Delete board</button></div></>}
+      {tab === 'labels' && <><div className="settings-heading"><h3>Labels</h3><p>Labels are available only on this board.</p></div><div className="settings-list">{board.labels.map((label) => <div key={label.id} className="settings-item"><span className={`label-chip ${label.color}`}>{label.name}</span><IconButton icon={Trash2} label={`Delete ${label.name} label`} onClick={() => onRemoveLabel(label)} /></div>)}{!board.labels.length && <p className="list-empty">No labels yet.</p>}</div><form className="settings-add-form" onSubmit={async (event) => { event.preventDefault(); if (await onAddLabel(labelName.trim(), color)) setLabelName(''); }}><label className="field-label">Label name<input value={labelName} onChange={(event) => setLabelName(event.target.value)} maxLength={40} required placeholder="e.g. Content" /></label><label className="field-label">Color<select value={color} onChange={(event) => setColor(event.target.value)}>{LABEL_COLORS.map((item) => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}</select></label><button type="submit" className="button primary" disabled={busy || !labelName.trim()}><Plus size={16} aria-hidden="true" />Add label</button></form></>}
+      {tab === 'people' && <><div className="settings-heading"><h3>Board members</h3><p>Members can create, edit and move cards. Only you can manage this board.</p></div><div className="settings-list">{board.members.map((member) => <div key={member.id} className="settings-item"><span className="member-row"><span className="mini-avatar">{member.email.slice(0, 1).toUpperCase()}</span>{member.email}</span><IconButton icon={X} label={`Remove ${member.email}`} onClick={() => onRemoveMember(member)} /></div>)}{!board.members.length && <p className="list-empty">Only you have access right now.</p>}</div><form className="settings-add-form" onSubmit={async (event) => { event.preventDefault(); if (await onAddMember(email)) setEmail(''); }}><label className="field-label">Add an existing user by email<input type="email" spellCheck="false" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="name@example.com" /></label><button type="submit" className="button primary" disabled={busy || !email.trim()}><Plus size={16} aria-hidden="true" />Add member</button></form></>}
+      {error && <p className="form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />{error}</p>}
+    </div>
+  </Dialog>;
+}

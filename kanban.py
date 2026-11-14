@@ -3,6 +3,8 @@ import argparse
 import hashlib
 import hmac
 import json
+import mimetypes
+import os
 import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -12,6 +14,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).parent
+WEB_DIST = ROOT / 'web' / 'dist'
 SCHEMA = """
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL);
@@ -179,9 +182,21 @@ def handler(db_path):
         def do_DELETE(self): self.handle_request('DELETE')
         def handle_request(self,method):
             path=urlparse(self.path).path
-            if method=='GET' and path in ('/','/app.js','/style.css','/theme.css'):
-                file=ROOT / {'/':'index.html','/app.js':'app.js','/style.css':'style.css','/theme.css':'theme.css'}[path]
-                raw=file.read_bytes(); self.send_response(200); self.send_header('Content-Type',{'/':'text/html','/app.js':'text/javascript','/style.css':'text/css','/theme.css':'text/css'}[path]); self.send_header('Content-Length',str(len(raw))); self.end_headers(); self.wfile.write(raw); return
+            if method == 'GET' and (path == '/' or path.startswith('/boards/') or path.startswith('/assets/') or path == '/favicon.svg'):
+                is_asset = path.startswith('/assets/') or path == '/favicon.svg'
+                file = (WEB_DIST / path.lstrip('/')).resolve() if is_asset else WEB_DIST / 'index.html'
+                if is_asset and not file.is_relative_to(WEB_DIST.resolve()):
+                    self.reply(404, {'error': 'Not found'}); return
+                if not file.is_file():
+                    self.reply(404 if is_asset else 503, {'error': 'Frontend build missing. Run npm install and npm run build in web/.'}); return
+                raw = file.read_bytes()
+                self.send_response(200)
+                self.send_header('Content-Type', mimetypes.guess_type(file.name)[0] or 'application/octet-stream')
+                self.send_header('Cache-Control', 'public, max-age=31536000, immutable' if is_asset else 'no-store')
+                self.send_header('Content-Length', str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
             db=connect(db_path)
             try:
                 length=int(self.headers.get('Content-Length','0'))
@@ -206,7 +221,10 @@ def handler(db_path):
                 jar=cookies.SimpleCookie(); jar.load(self.headers.get('Cookie','')); token=jar['session'].value if 'session' in jar else ''
                 row=db.execute('SELECT user_id,email FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>?',(token,datetime.now(timezone.utc).isoformat())).fetchone()
                 if not row: raise Problem(401,'Sign in required')
-                if method!='GET' and self.headers.get('Origin') and self.headers['Origin'] != f'http://{self.headers.get("Host")}': raise Problem(403,'Invalid origin')
+                allowed_origins = {f'http://{self.headers.get("Host")}'}
+                if os.environ.get('KANBAN_DEV_ORIGIN'):
+                    allowed_origins.add(os.environ['KANBAN_DEV_ORIGIN'])
+                if method!='GET' and self.headers.get('Origin') and self.headers['Origin'] not in allowed_origins: raise Problem(403,'Invalid origin')
                 if path=='/api/me' and method=='GET': result={'email':row['email']}
                 elif path=='/api/logout' and method=='POST': db.execute('DELETE FROM sessions WHERE token=?',(token,)); result={'ok':True}
                 elif path.startswith('/api/'): result=operate(db,row['user_id'],method,[p for p in path[5:].split('/') if p],data)
