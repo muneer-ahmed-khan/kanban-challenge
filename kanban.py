@@ -179,9 +179,9 @@ def handler(db_path):
         def do_DELETE(self): self.handle_request('DELETE')
         def handle_request(self,method):
             path=urlparse(self.path).path
-            if method=='GET' and path in ('/','/app.js','/style.css'):
-                file=ROOT / {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[path]
-                raw=file.read_bytes(); self.send_response(200); self.send_header('Content-Type',{'/':'text/html','/app.js':'text/javascript','/style.css':'text/css'}[path]); self.send_header('Content-Length',str(len(raw))); self.end_headers(); self.wfile.write(raw); return
+            if method=='GET' and path in ('/','/app.js','/style.css','/theme.css'):
+                file=ROOT / {'/':'index.html','/app.js':'app.js','/style.css':'style.css','/theme.css':'theme.css'}[path]
+                raw=file.read_bytes(); self.send_response(200); self.send_header('Content-Type',{'/':'text/html','/app.js':'text/javascript','/style.css':'text/css','/theme.css':'text/css'}[path]); self.send_header('Content-Length',str(len(raw))); self.end_headers(); self.wfile.write(raw); return
             db=connect(db_path)
             try:
                 length=int(self.headers.get('Content-Length','0'))

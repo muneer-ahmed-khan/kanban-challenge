@@ -2,6 +2,17 @@
 
 A small collaborative Kanban board built with Python, SQLite and plain browser JavaScript. Boards, columns, cards, due dates, labels, search and team sharing persist in SQLite. Board owners manage structure and members; members can manage cards. Access checks run on every API request.
 
+## Stack and challenge fit
+
+| Part | Technology |
+| --- | --- |
+| Server and API | Python 3 standard library (`http.server`) |
+| Database | SQLite (`sqlite3`) |
+| Interface | Semantic HTML, CSS and browser JavaScript |
+| Optional browser checks | Playwright and Chrome or Chromium |
+
+Challenge #146 permits any web or mobile stack. OutSystems is an optional route, not a requirement. This implementation chooses a local web app with built-in persistence and no runtime packages.
+
 ## Run locally
 
 Requires Python 3.10 or newer. No packages or build tools are needed.
@@ -46,4 +57,4 @@ Owner-only endpoints check ownership in the server. Card endpoints check board m
 
 Run `python3 -m unittest discover -s tests -v`. The test suite uses temporary SQLite databases and checks the owner/member boundary, card moves, board deletion and persistence behavior.
 
-For an optional browser check, install Playwright separately, start the server on port 8765 with a disposable database, and run `python3 tests/browser_smoke.py`. The script exercises sign-up, board and card actions, reload, member access and a mobile viewport. It uses Google Chrome on macOS if present; otherwise it uses Playwright's installed Chromium. Set `KANBAN_BROWSER` to another browser executable if needed.
+For the full browser walkthrough and screenshots, follow [TESTING.md](TESTING.md). Playwright is needed only for that optional check; the app itself needs no packages.
