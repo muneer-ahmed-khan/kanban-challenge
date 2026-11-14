@@ -89,7 +89,10 @@ def operate(db, user, method, parts, data):
         board_access(db,bid,user,True)
         if method=='PATCH':
             db.execute('UPDATE boards SET name=? WHERE id=?',(required(data.get('name'),'Board name'),bid)); return snapshot(db,bid,user)
-        if method=='DELETE': db.execute('DELETE FROM boards WHERE id=?',(bid,)); return {'ok':True}
+        if method=='DELETE':
+            db.execute('DELETE FROM cards WHERE column_id IN (SELECT id FROM columns WHERE board_id=?)',(bid,))
+            db.execute('DELETE FROM boards WHERE id=?',(bid,))
+            return {'ok':True}
     board_access(db,bid,user)
     kind=parts[2] if len(parts)>2 else ''
     if kind=='members':
@@ -164,17 +167,6 @@ def operate(db, user, method, parts, data):
                 db.execute('UPDATE cards SET title=?,description=?,due_date=? WHERE id=?',(title,desc,due or None,card_id))
                 db.execute('DELETE FROM card_labels WHERE card_id=?',(card_id,))
                 db.executemany('INSERT INTO card_labels(card_id,label_id) VALUES(?,?)',[(card_id,i) for i in ids]); return snapshot(db,bid,user)
-        if len(parts)==4 and parts[3]=='move' and method=='PATCH':
-            card_id=int(data.get('card_id',0)); target=int(data.get('column_id',0)); index=data.get('index',0)
-            if parent(db,'cards',card_id)!=bid or parent(db,'columns',target)!=bid: raise Problem(404,'Item not found')
-            if not isinstance(index,int): raise Problem(400,'Invalid position')
-            source=db.execute('SELECT column_id FROM cards WHERE id=?',(card_id,)).fetchone()[0]
-            db.execute('UPDATE cards SET column_id=? WHERE id=?',(target,card_id))
-            for col_id in {source,target}:
-                ids=[r['id'] for r in db.execute('SELECT id FROM cards WHERE column_id=? AND id!=? ORDER BY position,id',(col_id,card_id))]
-                if col_id==target: ids.insert(max(0,min(index,len(ids))),card_id)
-                positions(db,'cards','column_id',col_id,ids)
-            return snapshot(db,bid,user)
     raise Problem(404,'Not found')
 
 def handler(db_path):

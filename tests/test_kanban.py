@@ -60,4 +60,10 @@ class KanbanTests(unittest.TestCase):
         other=operate(self.db,self.alice,'POST',['boards'],{'name':'Other'})
         self.assertEqual(other['labels'],[])
 
+    def test_delete_board_with_cards(self):
+        first=self.board['columns'][0]['id']
+        self.op(self.alice,'POST',['cards'],{'column_id':first,'title':'One'})
+        self.assertEqual(self.op(self.alice,'DELETE',[]),{'ok':True})
+        self.assertEqual(operate(self.db,self.alice,'GET',['boards'],{}),[])
+
 if __name__ == '__main__': unittest.main()

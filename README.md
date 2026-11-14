@@ -16,10 +16,10 @@ Open [http://localhost:8000](http://localhost:8000). Sign up, create a board and
 ## Use the board
 
 - New boards start with To Do, In Progress and Done. Owners can add, rename, reorder and delete columns, and manage board labels and members.
-- Add cards with a title, description, due date and labels. Click a card to edit it. Drag a card onto another card or empty part of a column to move it. Reload to verify saved order.
+- Add cards with a title, description, due date and labels. Click a card to edit it. Drag a card onto another card or empty part of a column to move it, or choose its column and position in the editor. Reload to verify saved order.
 - Search titles and descriptions without case sensitivity. Label and overdue filters combine with search.
 - Open a card to edit or delete it. A column with cards cannot be deleted until they are moved or deleted.
-- The board settings button accepts `rename`, `delete`, `label`, `remove label`, `invite`, and `remove member`. It shows the IDs needed for removal.
+- Use **Manage board** to rename or delete a board, create or remove labels, and add or remove members.
 
 ## API
 
@@ -44,4 +44,6 @@ Owner-only endpoints check ownership in the server. Card endpoints check board m
 
 ## Check
 
-Run `python3 -m unittest discover -s tests -v`. The test suite uses an in-memory database and checks the owner/member boundary, card moves and persistence behavior.
+Run `python3 -m unittest discover -s tests -v`. The test suite uses temporary SQLite databases and checks the owner/member boundary, card moves, board deletion and persistence behavior.
+
+For an optional browser check, install Playwright separately, start the server on port 8765 with a disposable database, and run `python3 tests/browser_smoke.py`. The script exercises sign-up, board and card actions, reload, member access and a mobile viewport. It uses Google Chrome on macOS if present; otherwise it uses Playwright's installed Chromium. Set `KANBAN_BROWSER` to another browser executable if needed.
