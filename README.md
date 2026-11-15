@@ -46,7 +46,8 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to port
 - New boards start with To Do, In Progress and Done. Owners can add, rename, reorder and delete columns, and manage board labels and members.
 - Use **Add card** in a column to capture a title inline, then keep adding without leaving the board. Choose **More details** to carry the title into the full editor for a description, due date, labels and placement. Click a card to edit it. Drag a card onto another card or empty part of a column to move it, or choose its column and position in the editor. Reload to verify saved order.
 - Search titles and descriptions without case sensitivity. Label and overdue filters combine with search.
-- A board-level attention cue opens overdue cards in one click; the main New card action starts a card in the first column.
+- When a card is overdue or due within seven days, the board highlights the next deadline by card name and opens it directly. Overdue cards can still be filtered in one click. The main New card action starts a card in the first column.
+- After moving a card, use the temporary **Undo** action to restore its previous column and position.
 - Open a card to edit or delete it. A column with cards cannot be deleted until they are moved or deleted.
 - Closing a card with unsaved edits asks whether to keep editing or discard the changes.
 - Use **Board settings** to rename or delete a board, create or remove labels, and add or remove members.

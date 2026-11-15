@@ -146,9 +146,13 @@ with sync_playwright() as playwright:
     column(alice, 'Backlog').locator('.task-card').first.get_by_text('Set up hosting').wait_for()
     card(alice, 'Write copy').drag_to(column(alice, 'In Progress').locator('.column-cards'))
     column(alice, 'In Progress').get_by_text('Write copy').wait_for()
+    alice.locator('.toast').get_by_role('button', name='Undo').click()
+    column(alice, 'Backlog').get_by_text('Write copy').wait_for()
+    card(alice, 'Write copy').drag_to(column(alice, 'In Progress').locator('.column-cards'))
+    column(alice, 'In Progress').get_by_text('Write copy').wait_for()
     card(alice, 'Write copy').drag_to(column(alice, 'Backlog').locator('.column-cards'))
     column(alice, 'Backlog').get_by_text('Write copy').wait_for()
-    step('Desktop drag and drop within and across columns')
+    step('Desktop drag and drop within/across columns, with Undo')
 
     open_settings(alice, 'Labels')
     alice.get_by_role('tab', name='Labels').focus()
@@ -173,6 +177,10 @@ with sync_playwright() as playwright:
     assert card(alice, 'Write copy').get_by_text('Overdue', exact=False).is_visible()
     step('Board labels, overdue date and cross-column move')
 
+    alice.get_by_role('button', name='Open card').click()
+    alice.get_by_role('heading', name='Edit card').wait_for()
+    assert alice.get_by_role('textbox', name='Title', exact=True).input_value() == 'Write copy'
+    close_dialog(alice)
     alice.get_by_role('button', name='View overdue cards').click()
     assert alice.locator('.task-card').count() == 1
     alice.get_by_role('button', name='Clear filters').first.click()
@@ -197,6 +205,7 @@ with sync_playwright() as playwright:
     alice.get_by_label('Due date').fill((date.today() + timedelta(days=7)).isoformat())
     alice.get_by_role('button', name='Save changes').click()
     assert card(alice, 'Write copy').get_by_text('Overdue', exact=False).count() == 0
+    alice.get_by_text('Coming up', exact=True).wait_for()
     card(alice, 'Write copy').click()
     alice.get_by_label('Due date').fill((date.today() - timedelta(days=1)).isoformat())
     alice.get_by_role('button', name='Save changes').click()

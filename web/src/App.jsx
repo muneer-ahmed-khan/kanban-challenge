@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CircleAlert, Columns3, Menu, Plus, Settings2, SlidersHorizontal, Users } from 'lucide-react';
-import { api, isOverdue } from './api.js';
+import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, Columns3, Menu, Plus, Settings2, SlidersHorizontal, Users } from 'lucide-react';
+import { api, formatDate, isOverdue } from './api.js';
 import { AuthScreen, BoardColumn, BoardSettings, BootScreen, CardEditor, ConfirmDialog, FilterBar, IconButton, NameDialog, Sidebar } from './components.jsx';
 
 const savedBoardKey = 'kanban:selected-board';
@@ -23,14 +23,21 @@ export default function App() {
   const [dialog, setDialog] = useState(null);
   const [dialogError, setDialogError] = useState('');
   const [toast, setToast] = useState('');
+  const [undoMoveInfo, setUndoMoveInfo] = useState(null);
   const [search, setSearch] = useState('');
   const [labelId, setLabelId] = useState('');
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrollState, setScrollState] = useState({ left: false, right: false });
   const boardRef = useRef(null);
+  const toastTimer = useRef(null);
 
-  const notify = useCallback((message) => { setToast(message); window.setTimeout(() => setToast(''), 4500); }, []);
+  const notify = useCallback((message, undo = null) => {
+    window.clearTimeout(toastTimer.current);
+    setToast(message); setUndoMoveInfo(undo);
+    toastTimer.current = window.setTimeout(() => { setToast(''); setUndoMoveInfo(null); }, undo ? 7000 : 4500);
+  }, []);
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
   const clearFilters = () => { setSearch(''); setLabelId(''); setOverdueOnly(false); };
   const closeDialog = () => { setDialog(null); setDialogError(''); };
   const openDialog = (next) => { setDialogError(''); setDialog(next); };
@@ -156,7 +163,21 @@ export default function App() {
   }
 
   async function moveCard(cardId, columnId, index) {
-    await mutate(`/boards/${board.id}/cards/move`, 'PATCH', { card_id: cardId, column_id: columnId, index }, 'Card moved.');
+    const source = board.columns.find((column) => column.cards.some((card) => card.id === cardId));
+    if (!source) return;
+    const originalIndex = source.cards.findIndex((card) => card.id === cardId);
+    await run(async () => {
+      const snapshot = await api(`/boards/${board.id}/cards/move`, 'PATCH', { card_id: cardId, column_id: columnId, index });
+      applySnapshot(snapshot);
+      notify('Card moved.', { boardId: board.id, cardId, columnId: source.id, index: originalIndex });
+    });
+  }
+
+  async function undoLastMove() {
+    if (!undoMoveInfo || undoMoveInfo.boardId !== board?.id) return;
+    const { cardId, columnId, index } = undoMoveInfo;
+    setUndoMoveInfo(null);
+    await mutate(`/boards/${board.id}/cards/move`, 'PATCH', { card_id: cardId, column_id: columnId, index }, 'Move undone.');
   }
 
   async function reorderColumn(columnId, direction) {
@@ -191,6 +212,11 @@ export default function App() {
   const visibleCount = [...visibleCards.values()].reduce((count, cards) => count + cards.length, 0);
   const totalCount = board?.columns.reduce((count, column) => count + column.cards.length, 0) || 0;
   const overdueCount = board?.columns.reduce((count, column) => count + column.cards.filter((card) => isOverdue(card.due_date)).length, 0) || 0;
+  const dueHorizon = new Date();
+  dueHorizon.setDate(dueHorizon.getDate() + 7);
+  const horizonDate = [dueHorizon.getFullYear(), String(dueHorizon.getMonth() + 1).padStart(2, '0'), String(dueHorizon.getDate()).padStart(2, '0')].join('-');
+  const upcoming = board?.columns.flatMap((column) => column.name.toLocaleLowerCase() === 'done' ? [] : column.cards.filter((card) => card.due_date && card.due_date <= horizonDate).map((card) => ({ ...card, columnName: column.name, columnId: column.id }))).sort((a, b) => a.due_date.localeCompare(b.due_date)) || [];
+  const nextDue = upcoming[0];
   const hasFilters = !!(search || labelId || overdueOnly);
 
   useEffect(() => {
@@ -214,7 +240,7 @@ export default function App() {
       <div className="mobile-header"><IconButton icon={Menu} label="Open navigation" onClick={() => setMobileOpen(true)} /><span className="wordmark"><span className="wordmark-symbol"><Columns3 size={17} strokeWidth={2.4} aria-hidden="true" /></span>kanban</span></div>
       {boardLoading ? <div className="board-loading" role="status">Loading board…</div> : boardError ? <div className="empty-workspace"><div className="empty-icon"><SlidersHorizontal size={26} aria-hidden="true" /></div><h1>Board unavailable</h1><p>{boardError}</p><button className="button secondary" onClick={() => { setBoardError(''); window.history.replaceState({}, '', '/'); }}>Back to boards</button></div> : !board ? <div className="empty-workspace"><div className="empty-icon"><FolderKanbanIcon /></div><h1>Bring your work together.</h1><p>Create a board to organize the next thing your team is building.</p><button className="button primary" onClick={() => openDialog({ type: 'createBoard' })}><Plus size={18} aria-hidden="true" />Create your first board</button></div> : <>
         <header className="workspace-header"><div className="header-copy"><div className="board-heading"><span className="board-emblem" aria-hidden="true"><Columns3 size={23} strokeWidth={1.9} /></span><div><h1>{board.name}</h1><p className="board-meta">{board.columns.length} {board.columns.length === 1 ? 'column' : 'columns'} <span>·</span> {totalCount} {totalCount === 1 ? 'card' : 'cards'}{board.members.length > 0 && <span className="team-count"><Users size={14} aria-hidden="true" /> You + {board.members.length} {board.members.length === 1 ? 'member' : 'members'}</span>}</p></div></div></div><div className="header-actions"><button className="button primary new-card-button" disabled={!board.columns.length} title={board.columns.length ? 'Add a card to the first column' : 'Add a column first'} onClick={() => openDialog({ type: 'card', columnId: board.columns[0].id })}><Plus size={18} aria-hidden="true" />New card</button>{board.owner && <button className="button secondary manage-button" onClick={() => openDialog({ type: 'settings' })}><Settings2 size={17} aria-hidden="true" />Board settings</button>}</div></header>
-        {overdueCount > 0 && <div className="attention-note"><span className="attention-symbol"><CircleAlert size={19} aria-hidden="true" /></span><p><strong>{overdueCount} {overdueCount === 1 ? 'card needs' : 'cards need'} attention.</strong> Past {overdueCount === 1 ? 'its' : 'their'} due date.</p><button type="button" onClick={() => { setSearch(''); setLabelId(''); setOverdueOnly(true); boardRef.current?.scrollTo({ left: 0, behavior: 'smooth' }); }}>View overdue cards <ArrowRight size={16} aria-hidden="true" /></button></div>}
+        {nextDue && <div className={`attention-note ${isOverdue(nextDue.due_date) ? 'is-overdue' : ''}`}><span className="attention-symbol">{isOverdue(nextDue.due_date) ? <CircleAlert size={19} aria-hidden="true" /> : <CalendarDays size={19} aria-hidden="true" />}</span><div className="attention-copy"><strong>{isOverdue(nextDue.due_date) ? 'Needs attention' : 'Coming up'}</strong><p>{nextDue.title}</p><span>{nextDue.columnName} · {isOverdue(nextDue.due_date) ? 'Overdue since ' : 'Due '}{formatDate(nextDue.due_date)}{upcoming.length > 1 ? ` · ${upcoming.length - 1} more with deadlines` : ''}</span></div><div className="attention-actions"><button type="button" className="attention-open" onClick={() => openDialog({ type: 'card', card: nextDue, columnId: nextDue.columnId })}>Open card <ArrowRight size={16} aria-hidden="true" /></button>{overdueCount > 0 && <button type="button" className="attention-filter" onClick={() => { setSearch(''); setLabelId(''); setOverdueOnly(true); boardRef.current?.scrollTo({ left: 0, behavior: 'smooth' }); }}>View overdue cards</button>}</div></div>}
         <FilterBar search={search} setSearch={setSearch} labelId={labelId} setLabelId={setLabelId} overdueOnly={overdueOnly} setOverdueOnly={setOverdueOnly} labels={board.labels} hasFilters={hasFilters} onClear={clearFilters} />
         <div className="board-tools"><p>{hasFilters ? `${visibleCount} of ${totalCount} cards shown` : 'Drag cards to move them, or open a card for more options.'}</p><div className="board-navigation"><IconButton icon={ArrowLeft} label="Scroll columns left" disabled={!scrollState.left} onClick={() => boardRef.current?.scrollBy({ left: -350, behavior: 'smooth' })} /><IconButton icon={ArrowRight} label="Scroll columns right" disabled={!scrollState.right} onClick={() => boardRef.current?.scrollBy({ left: 350, behavior: 'smooth' })} /></div></div>
         {hasFilters && visibleCount === 0 && <div className="filter-empty"><SlidersHorizontal size={19} aria-hidden="true" /><span>No cards match these filters.</span><button type="button" onClick={clearFilters}>Clear filters</button></div>}
@@ -223,7 +249,7 @@ export default function App() {
         </div>
       </>}
     </main>
-    {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
+    {toast && <div className="toast" role="status" aria-live="polite"><span>{toast}</span>{undoMoveInfo?.boardId === board?.id && <button type="button" onClick={undoLastMove}>Undo</button>}</div>}
     {dialog?.type === 'createBoard' && <NameDialog title="Create board" label="Board name" submitLabel="Create board" onSave={createBoard} onClose={closeDialog} busy={busy} error={dialogError} />}
     {dialog?.type === 'createColumn' && <NameDialog title="Add column" label="Column name" submitLabel="Add column" onSave={(name) => mutate(`/boards/${board.id}/columns`, 'POST', { name }, 'Column added.', true)} onClose={closeDialog} busy={busy} error={dialogError} />}
     {dialog?.type === 'renameColumn' && <NameDialog title="Rename column" label="Column name" initial={dialog.column.name} submitLabel="Save name" onSave={(name) => mutate(`/boards/${board.id}/columns/${dialog.column.id}`, 'PATCH', { name }, 'Column renamed.', true)} onClose={closeDialog} busy={busy} error={dialogError} />}
