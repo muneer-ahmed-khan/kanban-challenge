@@ -71,16 +71,17 @@ export function Sidebar({ boards, selectedId, me, onSelect, onCreate, onSignOut,
     {mobileOpen && <button className="sidebar-scrim" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
     <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
       <div className="sidebar-brand"><span className="wordmark"><span className="wordmark-symbol"><Columns3 size={18} strokeWidth={2.4} aria-hidden="true" /></span>kanban</span><IconButton className="mobile-close" icon={X} label="Close navigation" onClick={() => setMobileOpen(false)} /></div>
-      <div className="sidebar-section"><div className="sidebar-section-head"><span>Boards</span><IconButton icon={Plus} label="Create board" onClick={onCreate} /></div>
+      <div className="sidebar-section"><div className="sidebar-section-head"><span>Boards</span></div>
         <nav aria-label="Boards" className="board-nav">{boards.map((item) => <a href={`/boards/${item.id}`} key={item.id} aria-current={selectedId === item.id ? 'page' : undefined} className={`nav-board ${selectedId === item.id ? 'active' : ''}`} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onSelect(item.id); setMobileOpen(false); }}><FolderKanban size={17} strokeWidth={1.8} aria-hidden="true" /><span>{item.name}</span></a>)}
           {boards.length === 0 && <p className="sidebar-empty">Your boards will appear here.</p>}</nav>
+        <button type="button" className="sidebar-create" onClick={onCreate}><Plus size={17} aria-hidden="true" />Create board</button>
       </div>
       <div className="sidebar-footer"><span className="avatar" aria-hidden="true">{me.email.slice(0, 1).toUpperCase()}</span><span className="account-email" title={me.email}>{me.email}</span><IconButton icon={LogOut} label="Sign out" onClick={onSignOut} /></div>
     </aside>
   </>;
 }
 
-export function BoardColumn({ column, cards, labels, owner, canMoveLeft, canMoveRight, onAdd, onQuickAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
+export function BoardColumn({ column, index, cards, labels, owner, canMoveLeft, canMoveRight, onAdd, onQuickAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -109,7 +110,7 @@ export function BoardColumn({ column, cards, labels, owner, canMoveLeft, canMove
     if (id) onMove(id, column.id, index);
   };
   return <section className={`board-column ${dragOver ? 'drop-target' : ''}`} aria-labelledby={`column-${column.id}`} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragOver(false); }} onDrop={(event) => drop(event, column.cards.length)}>
-    <div className="column-top"><div className="column-title"><span className="stage-dot" aria-hidden="true" /><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
+    <div className="column-top"><div className="column-title"><span className="stage-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
       {owner && <div className="column-tools"><div className="menu-wrap" ref={menuRef}><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" disabled={!canMoveLeft} onClick={() => { setMenu(false); onReorder(column.id, -1); }}>Move {column.name} left</button><button type="button" disabled={!canMoveRight} onClick={() => { setMenu(false); onReorder(column.id, 1); }}>Move {column.name} right</button><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
     </div>
     <div className="column-cards">{column.cards.length === 0 && <p className="column-empty">Drop a card here, or add one below.</p>}{cards.map((card) => {

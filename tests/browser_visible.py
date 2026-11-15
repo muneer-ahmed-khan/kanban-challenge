@@ -318,6 +318,10 @@ with sync_playwright() as playwright:
     assert alice.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Mobile page overflows horizontally'
     assert column(alice, 'Backlog').is_visible()
     alice.screenshot(path=str(SHOTS / 'mobile.png'), full_page=True)
+    alice.locator('.board-scroll').focus()
+    alice.keyboard.press('ArrowRight')
+    alice.wait_for_function("document.querySelector('.board-scroll').scrollLeft > 0")
+    alice.locator('.board-scroll').evaluate('(node) => node.scrollLeft = 0')
     alice.get_by_role('button', name='Open navigation').click()
     alice.locator('.mobile-close').click()
     step('Mobile board layout and navigation')
@@ -332,6 +336,7 @@ with sync_playwright() as playwright:
     column(alice, 'Review').get_by_role('button', name='Review options').click()
     alice.get_by_role('button', name='Delete column').click()
     alice.get_by_role('button', name='Delete column').last.click()
+    column(alice, 'Review').wait_for(state='detached')
     assert column(alice, 'Review').count() == 0
     column(alice, 'Backlog').get_by_role('button', name='Backlog options').click()
     alice.get_by_role('button', name='Delete column').click()
