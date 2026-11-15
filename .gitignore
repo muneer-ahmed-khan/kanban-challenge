@@ -1,5 +1,10 @@
-kanban.sqlite3
+*.sqlite3
 *.sqlite3-*
+*.db
+*.db-*
+.env
+.env.*
+.venv/
 __pycache__/
 *.pyc
 .DS_Store

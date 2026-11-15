@@ -1,6 +1,13 @@
 # Kanban — Coding Challenge #146
 
+[![CI](https://github.com/muneer-ahmed-khan/kanban-challenge/actions/workflows/ci.yml/badge.svg)](https://github.com/muneer-ahmed-khan/kanban-challenge/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A collaborative Kanban board with private accounts, owner-managed boards, and card editing for team members. The interface uses React, Vite and Lucide icons. Python serves the API and stores data in SQLite.
+
+![Kanban board showing columns, cards, search and team controls](screenshots/desktop.png)
+
+See the [mobile board](screenshots/mobile.png), [card editor](screenshots/editor.png), [board settings](screenshots/settings.png), and more views in the [screenshot gallery](TESTING.md#screenshots).
 
 ## Stack and challenge fit
 
@@ -84,6 +91,6 @@ For the visible Chrome walkthrough and screenshots, follow [TESTING.md](TESTING.
 
 ## Contributing
 
-Issues and pull requests are welcome. Fork the repository, run the unit and visible browser checks, and describe the behavior you changed. Keep test accounts and personal data out of commits. The frontend source is in `web/src`; the API is in `kanban.py`.
+Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the local workflow and review checklist. The [security policy](SECURITY.md) explains how to report a vulnerability privately.
 
 Licensed under [MIT](LICENSE).
