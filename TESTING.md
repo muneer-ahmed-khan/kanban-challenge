@@ -37,11 +37,11 @@ The browser script creates random `@example.com` test accounts in the disposable
 | --- | --- |
 | Access | Signed-out workspace hidden; sign-up, sign-out, sign-in |
 | Boards and columns | Create board; add, reorder, rename and delete columns; Escape/outside-click menu dismissal; delete board with cards |
-| Cards | Required title; inline quick capture; draft handoff to full editor; unsaved-edit discard choice; create, edit, delete; native drag and drop within/across columns with Undo; editor-based move |
+| Cards | Required title; inline quick capture; draft handoff to full editor; unsaved-edit discard choice; create, edit, delete; native drag and drop within/across columns with Undo; styled column and position dropdowns in the editor |
 | Due dates and labels | Overdue flag appears and clears; next deadline opens its card; due-soon summary; board label creation and card attachment |
-| Finding cards | Case-insensitive description search; label and overdue filters together; no-match state |
+| Finding cards | Case-insensitive description search; styled label menu, keyboard open/Escape/focus, label and overdue filters together; no-match state |
 | Teams | Member sees and changes cards; owner sees member changes; member board/column/label/member API changes receive 403; non-member board request receives 404 |
-| Persistence and layout | Reload retains board and card positions; complete “In Progress” heading and four columns at 1440px; dialog animation respects reduced motion; keyboard scrolling across mobile columns; sign-in, board, editor, settings and mobile screenshots; no page overflow at 320px; no browser page errors |
+| Persistence and layout | Reload retains board and card positions; complete “In Progress” heading and four columns at 1440px; dialog animation respects reduced motion; mobile dropdown stays in the viewport; keyboard scrolling across mobile columns; sign-in, board, editor, settings and mobile screenshots; no page overflow at 320px; no browser page errors |
 
 The screenshot account names are visual placeholders; test accounts have random addresses in the disposable database.
 
@@ -51,6 +51,7 @@ The screenshot account names are visual placeholders; test accounts have random 
 - [Mobile board](screenshots/mobile.png) — 390px viewport.
 - [Board settings](screenshots/settings.png) — member management.
 - [Card editor](screenshots/editor.png) — card details and labels.
+- [Editor dropdown](screenshots/editor-dropdown.png), [board filter dropdown](screenshots/filter-dropdown.png), and [mobile dropdown](screenshots/mobile-dropdown.png) — styled selection menus in context.
 - [Sign-in](screenshots/auth.png) and [mobile sign-in](screenshots/auth-mobile.png) — account entry.
 
 ## Scope

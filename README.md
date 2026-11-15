@@ -8,7 +8,7 @@ A collaborative Kanban board with private accounts, owner-managed boards, and ca
 | --- | --- |
 | Server and API | Python 3 standard library (`http.server`) |
 | Database | SQLite (`sqlite3`) |
-| Frontend | React 19, Vite 8, CSS, Lucide React, locally bundled Plus Jakarta Sans |
+| Frontend | React 19, Vite 8, CSS, Lucide React, Radix Select, locally bundled Plus Jakarta Sans |
 | Browser checks | Playwright in visible Google Chrome |
 
 Challenge #146 permits any web or mobile stack. OutSystems is an optional route, not a requirement. This implementation is a web app with persistent local storage and server-enforced permissions.
@@ -47,6 +47,7 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to port
 - Use **Add card** in a column to capture a title inline, then keep adding without leaving the board. Choose **More details** to carry the title into the full editor for a description, due date, labels and placement. Click a card to edit it. Drag a card onto another card or empty part of a column to move it, or choose its column and position in the editor. Reload to verify saved order.
 - Use the board arrows on desktop or a horizontal swipe on a narrow screen to move between columns. The board can also be scrolled with the keyboard. Column menus close with Escape or a click outside. Interface motion follows the device's reduced-motion preference.
 - Search titles and descriptions without case sensitivity. Label and overdue filters combine with search.
+- Label, card placement, and color choices use the same styled dropdown. Open one with click, touch, Enter, Space, or an arrow key; move through choices with the keyboard and close it with Escape.
 - When a card is overdue or due within seven days, the board highlights the next deadline by card name and opens it directly. Overdue cards can still be filtered in one click. The main New card action starts a card in the first column.
 - After moving a card, use the temporary **Undo** action to restore its previous column and position.
 - Open a card to edit or delete it. A column with cards cannot be deleted until they are moved or deleted.

@@ -82,6 +82,7 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .auth-panel input, .field-label input, .field-label textarea, .field-label select { width: 100%; min-width: 0; border: 1px solid #d5dde7; border-radius: 8px; background: white; color: var(--ink); outline: none; padding: 10px 12px; font-size: 14px; font-weight: 450; }
 .auth-panel input, .field-label input, .field-label select { height: 43px; }
 .field-label textarea { resize: vertical; min-height: 94px; line-height: 1.5; }
+.field-label .app-select-trigger { font-weight: 500; }
 .auth-panel input::placeholder, .field-label input::placeholder, .field-label textarea::placeholder { color: #64758a; }
 .auth-panel input:focus, .field-label input:focus, .field-label select:focus, .field-label textarea:focus { border-color: #6b8cf1; outline: 3px solid #e4ebff; }
 .auth-submit { width: 100%; justify-content: space-between; min-height: 43px; margin-top: 5px; font-size: 14px; }
@@ -145,8 +146,28 @@ button, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .search-field:focus-within { border-color: #6b8cf1; outline: 3px solid #e4ebff; }
 .search-field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 14px; }
 .search-field input::placeholder { color: #64758a; }
-.select-field { position: relative; display: flex; align-items: center; gap: 7px; height: 43px; padding: 0 10px 0 12px; border: 1px solid #cfd9e5; border-radius: 9px; background: white; color: #65768a; }
-.select-field select { appearance: none; max-width: 160px; padding: 0 2px; border: 0; outline: 0; background: white; color: #384a5d; font-size: 14px; cursor: pointer; }
+.app-select { min-width: 0; width: 100%; }
+.filter-select { width: auto; min-width: 150px; }
+.app-select-trigger { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; min-height: 43px; padding: 0 12px; border: 1px solid #cfd9e5; border-radius: 9px; background: white; color: #43556d; text-align: left; font-size: 14px; font-weight: 550; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+.app-select-trigger:hover { border-color: #9eafc7; background: #fcfdff; }
+.app-select-trigger[data-state="open"] { border-color: #6b8cf1; box-shadow: 0 0 0 3px #e4ebff; }
+.app-select-trigger svg:first-child { flex: none; color: #65768a; }
+.app-select-value { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-select-chevron { display: inline-flex; margin-left: auto; color: #5b6e87; transition: transform .18s ease; }
+.app-select-trigger[data-state="open"] .app-select-chevron { transform: rotate(180deg); }
+.app-select-content { z-index: 70; min-width: var(--radix-select-trigger-width); max-width: min(300px, calc(100vw - 24px)); max-height: min(320px, var(--radix-select-content-available-height)); overflow: hidden; border: 1px solid #d9e1ed; border-radius: 11px; background: white; box-shadow: 0 14px 36px #18294122; animation: select-enter .16s cubic-bezier(.2,.8,.2,1) both; }
+.app-select-viewport { padding: 5px; }
+.app-select-option { display: flex; align-items: center; gap: 9px; min-height: 38px; padding: 8px 10px; border-radius: 7px; outline: 0; color: #2c3c53; font-size: 13px; font-weight: 580; cursor: pointer; user-select: none; }
+.app-select-option[data-highlighted] { background: #eaf0ff; color: #2545ba; }
+.app-select-option[data-state="checked"] { font-weight: 720; }
+.app-select-check { display: inline-flex; align-items: center; margin-left: auto; color: var(--blue); }
+.app-select-swatch { width: 13px; height: 13px; flex: none; border-radius: 4px; }
+.app-select-swatch.blue { background: #4c6dda; }
+.app-select-swatch.red { background: #d45a61; }
+.app-select-swatch.green { background: #39a978; }
+.app-select-swatch.purple { background: #9d72c9; }
+.app-select-swatch.amber { background: #dc9b42; }
+@keyframes select-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .overdue-filter { display: flex; align-items: center; gap: 8px; min-height: 43px; color: #40536a; font-size: 14px; cursor: pointer; white-space: nowrap; }
 .overdue-filter input { width: 15px; height: 15px; margin: 0; accent-color: var(--blue); }
 .clear-filters, .filter-empty button { border: 0; background: transparent; color: var(--blue); font-size: 13px; font-weight: 680; }
