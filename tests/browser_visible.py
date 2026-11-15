@@ -71,6 +71,7 @@ with sync_playwright() as playwright:
     alice.get_by_role('heading', name='Website Relaunch').wait_for()
     board_id = int(alice.url.rstrip('/').split('/')[-1])
     assert [item.inner_text() for item in alice.locator('.board-column h2').all()] == ['To Do', 'In Progress', 'Done']
+    assert column(alice, 'In Progress').locator('h2').evaluate('(node) => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight')
     step('Board creation and three default columns')
 
     alice.get_by_role('button', name='New card').click()
@@ -98,6 +99,7 @@ with sync_playwright() as playwright:
     alice.get_by_label('Column name').fill('Review')
     alice.get_by_role('button', name='Add column').last.click()
     column(alice, 'Review').wait_for()
+    column(alice, 'Review').get_by_role('button', name='Review options').click()
     column(alice, 'Review').get_by_role('button', name='Move Review left').click()
     alice.locator('.board-column').nth(2).get_by_role('heading', name='Review').wait_for()
     column(alice, 'To Do').get_by_role('button', name='To Do options').click()
@@ -108,21 +110,35 @@ with sync_playwright() as playwright:
     step('Add, reorder and rename columns')
 
     column(alice, 'Backlog').get_by_role('button', name='Add card').click()
-    assert alice.get_by_role('button', name='Create card').is_disabled()
-    alice.get_by_role('textbox', name='Title', exact=True).fill('Write copy')
+    assert column(alice, 'Backlog').get_by_role('button', name='Add card').is_disabled()
+    column(alice, 'Backlog').get_by_label('Card title for Backlog').fill('Write copy')
+    column(alice, 'Backlog').get_by_role('button', name='More details').click()
+    assert alice.get_by_role('textbox', name='Title', exact=True).input_value() == 'Write copy'
     alice.locator('.card-form textarea').fill('Homepage headline and navigation')
     alice.get_by_role('button', name='Create card').click()
     card(alice, 'Write copy').wait_for()
+    column(alice, 'Backlog').get_by_role('button', name='Add card').click()
     for title in ['Design hero image', 'Set up hosting']:
+        column(alice, 'Backlog').get_by_label('Card title for Backlog').fill(title)
         column(alice, 'Backlog').get_by_role('button', name='Add card').click()
-        alice.get_by_role('textbox', name='Title', exact=True).fill(title)
-        alice.get_by_role('button', name='Create card').click()
         card(alice, title).wait_for()
+    column(alice, 'Backlog').get_by_role('button', name='Cancel').click()
     card(alice, 'Set up hosting').click()
     alice.get_by_label('Position').select_option('0')
     alice.get_by_role('button', name='Save changes').click()
     alice.locator('.board-column').first.locator('.task-card').first.get_by_text('Set up hosting').wait_for()
     step('Required card title, card creation and same-column reorder')
+
+    card(alice, 'Design hero image').click()
+    alice.get_by_role('textbox', name='Title', exact=True).fill('Unpublished draft')
+    alice.get_by_role('button', name='Cancel').click()
+    alice.get_by_text('Discard your changes?').wait_for()
+    alice.get_by_role('button', name='Keep editing').click()
+    assert alice.get_by_role('textbox', name='Title', exact=True).input_value() == 'Unpublished draft'
+    alice.get_by_role('button', name='Cancel').click()
+    alice.get_by_role('button', name='Discard changes').click()
+    card(alice, 'Design hero image').wait_for()
+    step('Unsaved card edits require an explicit discard choice')
 
     card(alice, 'Design hero image').drag_to(card(alice, 'Set up hosting'))
     column(alice, 'Backlog').locator('.task-card').first.get_by_text('Design hero image').wait_for()
@@ -233,8 +249,9 @@ with sync_playwright() as playwright:
     assert bob.get_by_role('button', name='Board settings').count() == 0
     assert bob.get_by_role('button', name='Add column').count() == 0
     column(bob, 'Backlog').get_by_role('button', name='Add card').click()
-    bob.get_by_role('textbox', name='Title', exact=True).fill('Bob task')
-    bob.get_by_role('button', name='Create card').click()
+    column(bob, 'Backlog').get_by_label('Card title for Backlog').fill('Bob task')
+    column(bob, 'Backlog').get_by_role('button', name='Add card').click()
+    column(bob, 'Backlog').get_by_role('button', name='Cancel').click()
     card(bob, 'Bob task').click()
     bob.get_by_role('textbox', name='Title', exact=True).fill('Bob edited task')
     bob.locator('.card-form .form-row select').select_option(label='Done')

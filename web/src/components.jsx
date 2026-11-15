@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight,
-  CircleAlert, Columns3, Ellipsis, FolderKanban, GripVertical, LogOut, Plus,
+  ArrowLeft, ArrowRight, CalendarDays, ChevronDown,
+  CircleAlert, Columns3, Ellipsis, FolderKanban, LogOut, Plus,
   Search, Settings2, Tag, Trash2, Users, X,
 } from 'lucide-react';
 import { formatDate, isOverdue } from './api.js';
@@ -80,9 +80,20 @@ export function Sidebar({ boards, selectedId, me, onSelect, onCreate, onSignOut,
   </>;
 }
 
-export function BoardColumn({ column, cards, labels, owner, onAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
+export function BoardColumn({ column, cards, labels, owner, canMoveLeft, canMoveRight, onAdd, onQuickAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
   const [menu, setMenu] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const submitDraft = async (event) => {
+    event.preventDefault();
+    if (!draft.trim() || saving) return;
+    setSaving(true);
+    const saved = await onQuickAdd(column.id, draft.trim());
+    setSaving(false);
+    if (saved) setDraft('');
+  };
   const drop = (event, index) => {
     event.preventDefault(); event.stopPropagation(); setDragOver(false);
     const id = Number(event.dataTransfer.getData('text/plain'));
@@ -90,7 +101,7 @@ export function BoardColumn({ column, cards, labels, owner, onAdd, onEdit, onMov
   };
   return <section className={`board-column ${dragOver ? 'drop-target' : ''}`} aria-labelledby={`column-${column.id}`} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragOver(false); }} onDrop={(event) => drop(event, column.cards.length)}>
     <div className="column-top"><div className="column-title"><span className="stage-dot" aria-hidden="true" /><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
-      {owner && <div className="column-tools"><IconButton icon={ChevronLeft} label={`Move ${column.name} left`} onClick={() => onReorder(column.id, -1)} /><IconButton icon={ChevronRight} label={`Move ${column.name} right`} onClick={() => onReorder(column.id, 1)} /><div className="menu-wrap"><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
+      {owner && <div className="column-tools"><div className="menu-wrap"><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" disabled={!canMoveLeft} onClick={() => { setMenu(false); onReorder(column.id, -1); }}>Move {column.name} left</button><button type="button" disabled={!canMoveRight} onClick={() => { setMenu(false); onReorder(column.id, 1); }}>Move {column.name} right</button><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
     </div>
     <div className="column-cards">{column.cards.length === 0 && <p className="column-empty">Nothing here yet. Add a card to get started.</p>}{cards.map((card) => {
       const overdue = isOverdue(card.due_date);
@@ -101,7 +112,11 @@ export function BoardColumn({ column, cards, labels, owner, onAdd, onEdit, onMov
         {card.due_date && <span className={`card-due ${overdue ? 'overdue' : ''}`}><CalendarDays size={14} aria-hidden="true" />{overdue ? 'Overdue · ' : ''}{formatDate(card.due_date)}</span>}
       </button>;
     })}</div>
-    <button type="button" className="add-card" onClick={() => onAdd(column.id)}><Plus size={16} strokeWidth={2} aria-hidden="true" />Add card</button>
+    {adding ? <form className="quick-add" onSubmit={submitDraft}>
+      <label className="sr-only" htmlFor={`quick-add-${column.id}`}>Card title for {column.name}</label>
+      <input id={`quick-add-${column.id}`} name="quick-card-title" autoComplete="off" autoFocus maxLength={200} placeholder="Card title" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape' && !draft.trim()) setAdding(false); }} />
+      <div className="quick-add-actions"><button type="submit" className="button primary" disabled={!draft.trim() || saving}>{saving ? 'Adding…' : 'Add card'}</button><button type="button" className="button subtle" onClick={() => { setAdding(false); setDraft(''); }}>Cancel</button><button type="button" className="quick-add-details" onClick={() => { onAdd(column.id, draft); setAdding(false); setDraft(''); }}>More details</button></div>
+    </form> : <button type="button" className="add-card" onClick={() => setAdding(true)}><Plus size={16} strokeWidth={2} aria-hidden="true" />Add card</button>}
   </section>;
 }
 
@@ -122,18 +137,28 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose
   return <Dialog title={title} onClose={onClose}><div className="dialog-body"><p className="confirm-message">{message}</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="button" className="button danger" onClick={onConfirm} disabled={busy}>{confirmLabel}</button></div></div></Dialog>;
 }
 
-export function CardEditor({ card, initialColumnId, board, onSave, onDelete, onClose, busy, error }) {
+export function CardEditor({ card, initialTitle = '', initialColumnId, board, onSave, onDelete, onClose, busy, error }) {
   const initialColumn = board.columns.find((column) => column.id === (card?.column_id || initialColumnId)) || board.columns[0];
-  const [title, setTitle] = useState(card?.title || '');
+  const initialPosition = card ? initialColumn.cards.findIndex((item) => item.id === card.id) : initialColumn.cards.length;
+  const [title, setTitle] = useState(card?.title || initialTitle);
   const [description, setDescription] = useState(card?.description || '');
   const [dueDate, setDueDate] = useState(card?.due_date || '');
   const [labelIds, setLabelIds] = useState(card?.label_ids || []);
   const [columnId, setColumnId] = useState(initialColumn.id);
-  const [position, setPosition] = useState(card ? initialColumn.cards.findIndex((item) => item.id === card.id) : initialColumn.cards.length);
+  const [position, setPosition] = useState(initialPosition);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const target = board.columns.find((column) => column.id === columnId);
   const maxPosition = target.cards.length + (!card || card.column_id !== columnId ? 1 : 0);
   const toggleLabel = (id) => setLabelIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  return <Dialog title={card ? 'Edit card' : 'New card'} subtitle={card ? 'Update the details and place this card where it belongs.' : `Adding to ${initialColumn.name}`} onClose={onClose} className="card-dialog">
+  const dirty = title !== (card?.title || '') || description !== (card?.description || '') || dueDate !== (card?.due_date || '') || columnId !== initialColumn.id || position !== initialPosition || [...labelIds].sort().join(',') !== [...(card?.label_ids || [])].sort().join(',');
+  const requestClose = () => { if (dirty) setConfirmDiscard(true); else onClose(); };
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  return <Dialog title={card ? 'Edit card' : 'New card'} subtitle={card ? 'Update the details and place this card where it belongs.' : `Adding to ${initialColumn.name}`} onClose={requestClose} className="card-dialog">
     <form className="dialog-body card-form" onSubmit={(event) => { event.preventDefault(); onSave({ title: title.trim(), description, due_date: dueDate || null, label_ids: labelIds, column_id: columnId, position }); }}>
       <label className="field-label">Title<input name="title" autoComplete="off" autoFocus={window.matchMedia('(pointer: fine)').matches} value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={200} placeholder="What needs to get done?" /></label>
       <label className="field-label"><span className="field-heading">Description <span className="optional">Optional</span></span><textarea name="description" autoComplete="off" value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Add useful context for your team" /></label>
@@ -142,7 +167,8 @@ export function CardEditor({ card, initialColumnId, board, onSave, onDelete, onC
       <label className="field-label position-field">Position<select name="position" value={Math.min(position, maxPosition - 1)} onChange={(event) => setPosition(Number(event.target.value))}>{Array.from({ length: maxPosition }, (_, index) => <option key={index} value={index}>{index + 1} of {maxPosition}</option>)}</select></label>
       <fieldset className="label-picker"><legend>Labels</legend>{board.labels.length ? <div className="label-options">{board.labels.map((label) => <label key={label.id} className="label-option"><input type="checkbox" checked={labelIds.includes(label.id)} onChange={() => toggleLabel(label.id)} /><span className={`label-chip ${label.color}`}>{label.name}</span></label>)}</div> : <p>No labels yet. A board owner can add them in Board settings.</p>}</fieldset>
       {error && <p className="form-error" role="alert"><CircleAlert size={16} aria-hidden="true" />{error}</p>}
-      <div className="dialog-actions"><div>{card && <button type="button" className="button text-danger" onClick={onDelete}><Trash2 size={16} aria-hidden="true" />Delete card</button>}</div><div className="action-group"><button type="button" className="button secondary" onClick={onClose}>Cancel</button><button type="submit" className="button primary" disabled={busy || !title.trim()}>{busy ? 'Saving…' : card ? 'Save changes' : 'Create card'}</button></div></div>
+      {confirmDiscard && <div className="discard-prompt" role="alert"><div><strong>Discard your changes?</strong><span>The card has unsaved edits.</span></div><div className="action-group"><button type="button" className="button secondary" onClick={() => setConfirmDiscard(false)}>Keep editing</button><button type="button" className="button danger-outline" onClick={onClose}>Discard changes</button></div></div>}
+      <div className="dialog-actions"><div>{card && <button type="button" className="button text-danger" onClick={onDelete}><Trash2 size={16} aria-hidden="true" />Delete card</button>}</div><div className="action-group"><button type="button" className="button secondary" onClick={requestClose}>Cancel</button><button type="submit" className="button primary" disabled={busy || !title.trim()}>{busy ? 'Saving…' : card ? 'Save changes' : 'Create card'}</button></div></div>
     </form>
   </Dialog>;
 }
