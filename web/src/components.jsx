@@ -89,7 +89,7 @@ export function BoardColumn({ column, cards, labels, owner, onAdd, onEdit, onMov
     if (id) onMove(id, column.id, index);
   };
   return <section className={`board-column ${dragOver ? 'drop-target' : ''}`} aria-labelledby={`column-${column.id}`} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragOver(false); }} onDrop={(event) => drop(event, column.cards.length)}>
-    <div className="column-top"><div className="column-title"><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
+    <div className="column-top"><div className="column-title"><span className="stage-dot" aria-hidden="true" /><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
       {owner && <div className="column-tools"><IconButton icon={ChevronLeft} label={`Move ${column.name} left`} onClick={() => onReorder(column.id, -1)} /><IconButton icon={ChevronRight} label={`Move ${column.name} right`} onClick={() => onReorder(column.id, 1)} /><div className="menu-wrap"><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
     </div>
     <div className="column-cards">{column.cards.length === 0 && <p className="column-empty">Nothing here yet. Add a card to get started.</p>}{cards.map((card) => {
