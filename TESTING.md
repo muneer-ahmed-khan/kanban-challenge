@@ -41,7 +41,7 @@ The browser script creates random `@example.com` test accounts in the disposable
 | Due dates and labels | Overdue flag appears and clears; board label creation and card attachment |
 | Finding cards | Case-insensitive description search; label and overdue filters together; no-match state |
 | Teams | Member sees and changes cards; owner sees member changes; member board/column/label/member API changes receive 403; non-member board request receives 404 |
-| Persistence and layout | Reload retains board and card positions; first column is visible on load; desktop, settings and 390px mobile screenshots; no mobile page overflow; no browser page errors |
+| Persistence and layout | Reload retains board and card positions; four complete columns at 1440px; sign-in, board, editor, settings and mobile screenshots; no page overflow at 320px; no browser page errors |
 
 The screenshot account names are visual placeholders; test accounts have random addresses in the disposable database.
 
@@ -50,6 +50,8 @@ The screenshot account names are visual placeholders; test accounts have random 
 - [Desktop board](screenshots/desktop.png) — 1440px viewport, first column visible.
 - [Mobile board](screenshots/mobile.png) — 390px viewport.
 - [Board settings](screenshots/settings.png) — member management.
+- [Card editor](screenshots/editor.png) — card details and labels.
+- [Sign-in](screenshots/auth.png) and [mobile sign-in](screenshots/auth-mobile.png) — account entry.
 
 ## Scope
 

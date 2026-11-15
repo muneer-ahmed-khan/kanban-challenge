@@ -57,6 +57,10 @@ with sync_playwright() as playwright:
     bob_email = f'bob-{suffix}@example.com'
     carol_email = f'carol-{suffix}@example.com'
 
+    SHOTS.mkdir(exist_ok=True)
+    alice.goto(BASE, wait_until='networkidle')
+    alice.get_by_role('heading', name='Welcome back.').wait_for()
+    alice.screenshot(path=str(SHOTS / 'auth.png'), full_page=True)
     create_account(alice, alice_email)
     alice.bring_to_front()
     step('Signed-out screen, account creation and empty workspace')
@@ -68,6 +72,15 @@ with sync_playwright() as playwright:
     board_id = int(alice.url.rstrip('/').split('/')[-1])
     assert [item.inner_text() for item in alice.locator('.board-column h2').all()] == ['To Do', 'In Progress', 'Done']
     step('Board creation and three default columns')
+
+    alice.get_by_role('button', name='New card').click()
+    alice.get_by_role('textbox', name='Title', exact=True).fill('Quick task')
+    alice.get_by_role('button', name='Create card').click()
+    card(alice, 'Quick task').click()
+    alice.get_by_role('button', name='Delete card').click()
+    alice.get_by_role('button', name='Delete card').last.click()
+    assert card(alice, 'Quick task').count() == 0
+    step('Primary New card action opens the first column')
 
     alice.add_init_script("""window.__authFlash = false;
       document.addEventListener('DOMContentLoaded', () => {
@@ -122,6 +135,11 @@ with sync_playwright() as playwright:
     step('Desktop drag and drop within and across columns')
 
     open_settings(alice, 'Labels')
+    alice.get_by_role('tab', name='Labels').focus()
+    alice.keyboard.press('ArrowRight')
+    assert alice.get_by_role('tab', name='People').get_attribute('aria-selected') == 'true'
+    alice.keyboard.press('ArrowLeft')
+    assert alice.get_by_role('tab', name='Labels').get_attribute('aria-selected') == 'true'
     for label_name, color in [('Content', 'blue'), ('Bug', 'red')]:
         alice.get_by_label('Label name').fill(label_name)
         alice.get_by_label('Color').select_option(color)
@@ -129,6 +147,8 @@ with sync_playwright() as playwright:
         alice.get_by_text(label_name, exact=True).last.wait_for()
     close_dialog(alice)
     card(alice, 'Write copy').click()
+    alice.locator('.toast').wait_for(state='hidden')
+    alice.screenshot(path=str(SHOTS / 'editor.png'), full_page=True)
     alice.get_by_label('Due date').fill((date.today() - timedelta(days=1)).isoformat())
     alice.get_by_role('checkbox', name='Content').check()
     alice.locator('.card-form .form-row select').select_option(label='In Progress')
@@ -136,6 +156,11 @@ with sync_playwright() as playwright:
     column(alice, 'In Progress').get_by_text('Write copy').wait_for()
     assert card(alice, 'Write copy').get_by_text('Overdue', exact=False).is_visible()
     step('Board labels, overdue date and cross-column move')
+
+    alice.get_by_role('button', name='View overdue cards').click()
+    assert alice.locator('.task-card').count() == 1
+    alice.get_by_role('button', name='Clear filters').first.click()
+    step('Attention cue opens overdue cards in one click')
 
     alice.get_by_placeholder('Search cards').fill('HOSTING')
     assert alice.locator('.task-card').count() == 1
@@ -170,7 +195,7 @@ with sync_playwright() as playwright:
     alice.get_by_role('button', name='Create board', exact=True).last.click()
     assert alice.get_by_label('Filter by label').locator('option').count() == 1
     step('Labels are isolated per board')
-    alice.get_by_role('button', name='Website Relaunch').click()
+    alice.get_by_role('link', name='Website Relaunch').click()
     alice.get_by_role('heading', name='Website Relaunch').wait_for()
     open_settings(alice)
     alice.get_by_label('Board name').fill('Website Relaunch Updated')
@@ -203,7 +228,7 @@ with sync_playwright() as playwright:
 
     bob.bring_to_front()
     bob.reload(wait_until='networkidle')
-    bob.get_by_role('button', name='Website Relaunch').click()
+    bob.get_by_role('link', name='Website Relaunch').click()
     bob.get_by_role('heading', name='Website Relaunch').wait_for()
     assert bob.get_by_role('button', name='Board settings').count() == 0
     assert bob.get_by_role('button', name='Add column').count() == 0
@@ -228,7 +253,7 @@ with sync_playwright() as playwright:
     step('Data layer rejects member board, column, label and membership changes')
 
     carol.bring_to_front()
-    assert carol.get_by_role('button', name='Website Relaunch').count() == 0
+    assert carol.get_by_role('link', name='Website Relaunch').count() == 0
     carol.goto(f'{BASE}/boards/{board_id}', wait_until='networkidle')
     carol.get_by_role('heading', name='Board unavailable').wait_for()
     assert carol.request.get(f'{BASE}/api/boards/{board_id}').status == 404
@@ -254,6 +279,12 @@ with sync_playwright() as playwright:
     alice.get_by_role('button', name='Open navigation').click()
     alice.locator('.mobile-close').click()
     step('Mobile board layout and navigation')
+
+    alice.set_viewport_size({'width': 320, 'height': 700})
+    alice.wait_for_timeout(250)
+    assert alice.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Narrow mobile page overflows horizontally'
+    assert alice.get_by_role('button', name='New card').is_visible()
+    step('Narrow mobile viewport retains primary action without page overflow')
 
     alice.set_viewport_size({'width': 1440, 'height': 900})
     column(alice, 'Review').get_by_role('button', name='Review options').click()
@@ -281,13 +312,15 @@ with sync_playwright() as playwright:
     open_settings(alice)
     alice.get_by_role('button', name='Delete board').click()
     alice.get_by_role('button', name='Delete board').last.click()
-    alice.get_by_role('button', name='Website Relaunch').wait_for(state='detached')
+    alice.get_by_role('link', name='Website Relaunch').wait_for(state='detached')
     assert bob.request.get(f'{BASE}/api/boards/{board_id}').status == 404
     step('Board deletion removes access for members')
 
     bob.bring_to_front()
     bob.get_by_role('button', name='Sign out').click()
     bob.get_by_role('heading', name='Welcome back.').wait_for()
+    bob.set_viewport_size({'width': 390, 'height': 844})
+    bob.screenshot(path=str(SHOTS / 'auth-mobile.png'), full_page=True)
     assert bob.request.get(f'{BASE}/api/boards').status == 401
     bob.get_by_label('Email address').fill(bob_email)
     bob.get_by_label('Password').fill('password123')
