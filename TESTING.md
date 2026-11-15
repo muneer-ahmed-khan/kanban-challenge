@@ -36,12 +36,12 @@ The browser script creates random `@example.com` test accounts in the disposable
 | Area | Browser check |
 | --- | --- |
 | Access | Signed-out workspace hidden; sign-up, sign-out, sign-in |
-| Boards and columns | Create board; add, reorder, rename and delete columns; delete board with cards |
+| Boards and columns | Create board; add, reorder, rename and delete columns; Escape/outside-click menu dismissal; delete board with cards |
 | Cards | Required title; inline quick capture; draft handoff to full editor; unsaved-edit discard choice; create, edit, delete; native drag and drop within/across columns with Undo; editor-based move |
 | Due dates and labels | Overdue flag appears and clears; next deadline opens its card; due-soon summary; board label creation and card attachment |
 | Finding cards | Case-insensitive description search; label and overdue filters together; no-match state |
 | Teams | Member sees and changes cards; owner sees member changes; member board/column/label/member API changes receive 403; non-member board request receives 404 |
-| Persistence and layout | Reload retains board and card positions; complete “In Progress” heading and four columns at 1440px; sign-in, board, editor, settings and mobile screenshots; no page overflow at 320px; no browser page errors |
+| Persistence and layout | Reload retains board and card positions; complete “In Progress” heading and four columns at 1440px; dialog animation respects reduced motion; sign-in, board, editor, settings and mobile screenshots; no page overflow at 320px; no browser page errors |
 
 The screenshot account names are visual placeholders; test accounts have random addresses in the disposable database.
 

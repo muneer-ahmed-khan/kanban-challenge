@@ -74,6 +74,16 @@ with sync_playwright() as playwright:
     assert column(alice, 'In Progress').locator('h2').evaluate('(node) => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight')
     step('Board creation and three default columns')
 
+    alice.get_by_role('button', name='Board settings').click()
+    assert alice.locator('.app-dialog').evaluate('(node) => parseFloat(getComputedStyle(node).animationDuration) > 0.1')
+    close_dialog(alice)
+    alice.emulate_media(reduced_motion='reduce')
+    alice.get_by_role('button', name='Board settings').click()
+    assert alice.locator('.app-dialog').evaluate('(node) => parseFloat(getComputedStyle(node).animationDuration) < 0.01')
+    close_dialog(alice)
+    alice.emulate_media(reduced_motion='no-preference')
+    step('Dialog motion respects reduced-motion preference')
+
     alice.get_by_role('button', name='New card').click()
     alice.get_by_role('textbox', name='Title', exact=True).fill('Quick task')
     alice.get_by_role('button', name='Create card').click()
@@ -102,6 +112,12 @@ with sync_playwright() as playwright:
     column(alice, 'Review').get_by_role('button', name='Review options').click()
     column(alice, 'Review').get_by_role('button', name='Move Review left').click()
     alice.locator('.board-column').nth(2).get_by_role('heading', name='Review').wait_for()
+    column(alice, 'To Do').get_by_role('button', name='To Do options').click()
+    alice.keyboard.press('Escape')
+    assert alice.get_by_role('button', name='Rename column').count() == 0
+    column(alice, 'To Do').get_by_role('button', name='To Do options').click()
+    alice.locator('.workspace-header h1').click()
+    assert alice.get_by_role('button', name='Rename column').count() == 0
     column(alice, 'To Do').get_by_role('button', name='To Do options').click()
     alice.get_by_role('button', name='Rename column').click()
     alice.get_by_label('Column name').fill('Backlog')

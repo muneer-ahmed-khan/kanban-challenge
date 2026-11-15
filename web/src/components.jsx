@@ -82,10 +82,19 @@ export function Sidebar({ boards, selectedId, me, onSelect, onCreate, onSignOut,
 
 export function BoardColumn({ column, cards, labels, owner, canMoveLeft, canMoveRight, onAdd, onQuickAdd, onEdit, onMove, onReorder, onRename, onDelete }) {
   const [menu, setMenu] = useState(false);
+  const menuRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (!menu) return;
+    const closeOutside = (event) => { if (!menuRef.current?.contains(event.target)) setMenu(false); };
+    const closeEscape = (event) => { if (event.key === 'Escape') setMenu(false); };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeEscape); };
+  }, [menu]);
   const submitDraft = async (event) => {
     event.preventDefault();
     if (!draft.trim() || saving) return;
@@ -101,9 +110,9 @@ export function BoardColumn({ column, cards, labels, owner, canMoveLeft, canMove
   };
   return <section className={`board-column ${dragOver ? 'drop-target' : ''}`} aria-labelledby={`column-${column.id}`} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragOver(false); }} onDrop={(event) => drop(event, column.cards.length)}>
     <div className="column-top"><div className="column-title"><span className="stage-dot" aria-hidden="true" /><h2 id={`column-${column.id}`}>{column.name}</h2><span className="count">{column.cards.length}</span></div>
-      {owner && <div className="column-tools"><div className="menu-wrap"><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" disabled={!canMoveLeft} onClick={() => { setMenu(false); onReorder(column.id, -1); }}>Move {column.name} left</button><button type="button" disabled={!canMoveRight} onClick={() => { setMenu(false); onReorder(column.id, 1); }}>Move {column.name} right</button><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
+      {owner && <div className="column-tools"><div className="menu-wrap" ref={menuRef}><IconButton icon={Ellipsis} label={`${column.name} options`} aria-expanded={menu} onClick={() => setMenu(!menu)} />{menu && <div className="mini-menu"><button type="button" disabled={!canMoveLeft} onClick={() => { setMenu(false); onReorder(column.id, -1); }}>Move {column.name} left</button><button type="button" disabled={!canMoveRight} onClick={() => { setMenu(false); onReorder(column.id, 1); }}>Move {column.name} right</button><button type="button" onClick={() => { setMenu(false); onRename(column); }}>Rename column</button><button type="button" className="danger-text" onClick={() => { setMenu(false); onDelete(column); }}>Delete column</button></div>}</div></div>}
     </div>
-    <div className="column-cards">{column.cards.length === 0 && <p className="column-empty">Nothing here yet. Add a card to get started.</p>}{cards.map((card) => {
+    <div className="column-cards">{column.cards.length === 0 && <p className="column-empty">Drop a card here, or add one below.</p>}{cards.map((card) => {
       const overdue = isOverdue(card.due_date);
       return <button type="button" key={card.id} className="task-card" draggable onClick={() => onEdit(card, column.id)} onDragStart={(event) => { event.dataTransfer.setData('text/plain', String(card.id)); event.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDragOver(false)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, column.cards.findIndex((item) => item.id === card.id))}>
         {card.label_ids.length > 0 && <span className="card-labels">{card.label_ids.map((id) => { const label = labels.find((item) => item.id === id); return label ? <span key={id} className={`label-chip ${label.color}`}>{label.name}</span> : null; })}</span>}
